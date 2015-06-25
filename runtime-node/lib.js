@@ -12,7 +12,8 @@ else {
 }
 
 var setup = function(Shen) {
-	var io = {
+	function io(Shen) {
+	var io_obj = {
 		buffer: '',
 		open: function(type, name, direction) {
 			if (type[1] != "file")
@@ -65,17 +66,26 @@ var setup = function(Shen) {
 			var fout = [Shen.type_stream_out,
 						function(byte) {return Shen.repl_write_byte(byte);},
 						function() {}];
-			Shen.globals["*stoutput*"] = fout;
+			Shen.glob["*stoutput*"] = fout;
 			var fin = [Shen.type_stream_in,
 						function() {return Shen.repl_read_byte(fin, Shen.io.gets(), 0);},
 						function(){process.exit();}];
 			var finout = [Shen.type_stream_inout, fin, fout];
-			Shen.globals["*stinput*"] = finout;
+			Shen.glob["*stinput*"] = finout;
 		}
 	};
+	return io_obj; 
+	};
 
+	var readlineSync = require('readline-sync');
+
+	putstr = process.stdout.write.bind(process.stdout); 
+	readline = readlineSync.question; 
+
+	Shen.init({'io':Shen.console_io});
 	Shen.init({'io':io});
-	Shen.call_by_name("shen.initialise_environment", []);
+	Shen.call_toplevel = Shen.call_toplevel_run; // ?? 
+	Shen.exec("shen.initialise_environment", []);
 
 	Shen.eval_to_shenstr = function(code) {
 		var result = eval(code);

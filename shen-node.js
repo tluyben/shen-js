@@ -29,8 +29,10 @@ else {
 }
 
 function startRepl() {
+	Shen.exec("shen.shen", []);
+	/*
 	var shenRepl = repl.start({
-		prompt: "(Shen)",
+		prompt: "(Shen) ",
 		input: process.stdin,
 		output: process.stdout,
 		ignoreUndefined: true,
@@ -39,6 +41,7 @@ function startRepl() {
 	});
 	// since shen.js takes a long time to load, it's faster copying it over than re-requiring it
 	shenRepl.context = vm.createContext({'Shen': Shen});
+	*/
 }
 
 function compileShen(filelist, print) {
@@ -61,23 +64,27 @@ function compileShen(filelist, print) {
 			}
 		}
 
+		var js = Shen.exec("js.from-string", [fs.readFileSync(filename, 'utf-8')]);
+		//console.log(js);
+
+		/*
 		try {
-			kl = Shen.call_by_name("read-from-string", [fs.readFileSync(filename, 'utf-8')]);
+			kl = Shen.exec("read-from-string", [fs.readFileSync(filename, 'utf-8')]);
 		}
 		catch(err) {
 			return console.error('Error:', err.message);
 		}
-
+		
                 var curr = kl;
                 js = "";
                 while (curr.length !== 0) {
-                  var compiled = Shen.call_by_name("js-from-shen", [curr[1]]);
+                  var compiled = Shen.exec("js-from-shen", [curr[1]]);
                   if (typeof(compiled) !== "undefined") {
                     js = js + compiled;
                   }
                   curr = curr[2];
                 }
-
+		*/
 		if(print) {
 			console.info(js);
 		}
@@ -85,6 +92,7 @@ function compileShen(filelist, print) {
 			var jsPath = (hasExtension? filename.slice(0,-5) : filename) + '.js';
 			fs.writeFileSync(jsPath, js, 'utf-8');
 		}
+
 	});
 	console.info("========================================\n\n"+
 		"All compilation done. Don't forget to include shen.js in your source library.");
@@ -111,16 +119,18 @@ function runShen(filename) {
 }
 
 function shenEval(cmd, context, filename, callback) {
+	cmd = cmd.trim(); 
 	if(cmd[cmd.length-1] != ')') {
 		// stop the trippy repl module from resending illegal commands
-		return callback('SyntaxError');
+		
+		return callback('1. SyntaxError; "'+cmd[cmd.length-1]+'" with "'+cmd+'"');
 	}
 
 	// prevent repl from adding () around commands
 	runCode(cmd.slice(1,-1), context, filename, function(err, result) {
 		if (err) {
 			if(err.message.indexOf('read error') != -1) {
-				callback('SyntaxError');
+				callback('2. SyntaxError');
 			}
 			else {
 				callback(err);
@@ -135,7 +145,7 @@ function shenEval(cmd, context, filename, callback) {
 function runCode(cmd, context, filename, callback) {
 	var kl, js, result = null, error = null;
 	try {
-		kl = Shen.call_by_name("read-from-string", [cmd]);
+		kl = Shen.exec("read-from-string", [cmd]);
 	}
 	catch(err) {
 		return callback(err);
@@ -143,7 +153,7 @@ function runCode(cmd, context, filename, callback) {
 	if(kl.length === 0) {
 		return callback(null, '');
 	}
-	js = Shen.call_by_name("js-from-shen", [kl[1]]);
+	js = Shen.exec("js.from-kl", kl); //[kl[1]]);
 	try {
 		// shen obj must be in the same context as lib for shenstr() to function correctly
 		result = vm.runInContext('Shen.eval_to_shenstr('+JSON.stringify(js)+');', context, filename);
